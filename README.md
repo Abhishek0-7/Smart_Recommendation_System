@@ -49,4 +49,4 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## 📬 Contact
 Email - abhishek261kumar@gmail.com  
-Project Link: [https://github.com/yourusername/smart-recommendation-system](https://github.com/Abhishek0-7/Smart_Recommendation_System)
+Project Link: [https://github.com/Abhishek0-7/Smart_Recommendation_System](https://github.com/Abhishek0-7/Smart_Recommendation_System)
