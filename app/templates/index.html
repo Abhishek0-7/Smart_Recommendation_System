@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Recommendation System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Smart Recommendation System</h1>
+        <p>Get personalized recommendations enhanced with contextual awareness and sentiment analysis</p>
+    </header>
+
+    <div class="card-container">
+        <!-- Sentiment Analysis Card -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-smile"></i> Mood Analysis
+            </div>
+            <div class="card-body">
+                <p>Share your thoughts and we'll analyze your current mood:</p>
+                <textarea id="userText" placeholder="Tell us how you're feeling today..."></textarea>
+                <button onclick="analyzeSentiment()">
+                    <i class="fas fa-heart"></i> Analyze My Mood
+                </button>
+                <div class="results" id="sentimentResults"></div>
+            </div>
+        </div>
+
+        <!-- Movie Recommendations -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-film"></i> Smart Movie Recommendations
+            </div>
+            <div class="card-body">
+                <div class="contextual-info">
+                    <p><i class="fas fa-info-circle"></i> Your recommendations will be customized based on:</p>
+                    <p>• <strong>Time of day:</strong> <span id="timeContext"></span></p>
+                    <p>• <strong>Season:</strong> <span id="seasonContext"></span></p>
+                    <p>• <strong>Weather:</strong> <span id="weatherContext">Not available yet</span></p>
+                </div>
+                <input type="number" id="movieUserId" placeholder="Enter User ID">
+                <button onclick="getMovieRecommendations()">
+                    <i class="fas fa-search"></i> Get Recommendations
+                </button>
+                <div class="results" id="movieResults"></div>
+            </div>
+        </div>
+
+        <!-- Book Recommendations -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-book"></i> Book Recommendations
+            </div>
+            <div class="card-body">
+                <input type="number" id="bookUserId" placeholder="Enter User ID">
+                <button onclick="getBookRecommendations()">
+                    <i class="fas fa-search"></i> Get Recommendations
+                </button>
+                <div class="results" id="bookResults"></div>
+            </div>
+        </div>
+
+        <!-- Weather Information -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-cloud-sun"></i> Weather Information
+            </div>
+            <div class="card-body">
+                <input type="text" id="cityName" placeholder="Enter City">
+                <button onclick="getWeather()">
+                    <i class="fas fa-search"></i> Get Weather
+                </button>
+                <div class="results" id="weatherResults"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Display current contextual information
+        function updateContextInfo() {
+            const now = new Date();
+            const hour = now.getHours();
+            const month = now.getMonth() + 1; // JavaScript months are 0-indexed
+            
+            // Time context
+            let timeContext;
+            if (hour >= 5 && hour < 12) timeContext = "Morning";
+            else if (hour >= 12 && hour < 17) timeContext = "Afternoon";
+            else if (hour >= 17 && hour < 22) timeContext = "Evening";
+            else timeContext = "Night";
+            
+            // Season context
+            let seasonContext;
+            if (month >= 3 && month <= 5) seasonContext = "Spring";
+            else if (month >= 6 && month <= 8) seasonContext = "Summer";
+            else if (month >= 9 && month <= 11) seasonContext = "Fall";
+            else seasonContext = "Winter";
+            
+            document.getElementById('timeContext').textContent = timeContext;
+            document.getElementById('seasonContext').textContent = seasonContext;
+        }
+        
+        // Call immediately to show current context
+        updateContextInfo();
+        
+        // Global variable to store current sentiment
+        let currentMood = null;
+        
+        async function analyzeSentiment() {
+            const userText = document.getElementById('userText').value;
+            if (!userText) {
+                alert("Please enter some text to analyze");
+                return;
+            }
+            
+            try {
+                const response = await fetch('/analyze_sentiment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text: userText })
+                });
+                
+                const data = await response.json();
+                const resultDiv = document.getElementById('sentimentResults');
+                resultDiv.style.display = "block";
+                
+                // Save mood for later recommendations
+                currentMood = data.mood;
+                
+                let moodClass = data.mood === 'positive' ? 'positive' : 
+                               (data.mood === 'negative' ? 'negative' : 'neutral');
+                
+                resultDiv.innerHTML = `
+                    <h3>Your Current Mood Analysis</h3>
+                    <p>Detected Mood: <span class="mood-indicator ${moodClass}">${data.mood}</span></p>
+                    <p>Sentiment Score: ${data.polarity.toFixed(2)} (${data.polarity > 0 ? 'Positive' : data.polarity < 0 ? 'Negative' : 'Neutral'})</p>
+                    <p>Confidence: ${(data.subjectivity * 100).toFixed(1)}%</p>
+                    <p><i class="fas fa-info-circle"></i> Your movie recommendations will be adjusted based on your mood.</p>
+                `;
+            } catch (error) {
+                document.getElementById('sentimentResults').innerHTML = 
+                    `<p style="color:red;">Error analyzing sentiment: ${error.message}</p>`;
+            }
+        }
+
+        async function getMovieRecommendations() {
+            const userId = document.getElementById('movieUserId').value;
+            const cityName = document.getElementById('cityName').value;
+            
+            if (!userId) {
+                alert("Please enter a User ID");
+                return;
+            }
+            
+            try {
+                // Get the weather if a city has been entered
+                let weatherCondition = null;
+                if (cityName) {
+                    const weatherResponse = await fetch(`/weather/${cityName}`);
+                    if (weatherResponse.ok) {
+                        const weatherData = await weatherResponse.json();
+                        weatherCondition = weatherData.description;
+                        document.getElementById('weatherContext').textContent = weatherCondition;
+                    }
+                }
+                
+                // Get enhanced recommendations
+                const response = await fetch(`/recommend/movies_enhanced/${userId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        mood: currentMood,
+                        weather: weatherCondition
+                    })
+                });
+                
+                const data = await response.json();
+                const resultDiv = document.getElementById('movieResults');
+                resultDiv.style.display = "block";
+                
+                if (response.ok) {
+                    let html = `<h3>Smart Movie Recommendations</h3>`;
+                    
+                    if (currentMood) {
+                        let moodClass = currentMood === 'positive' ? 'positive' : 
+                                      (currentMood === 'negative' ? 'negative' : 'neutral');
+                        html += `<p>Recommendations adjusted for your <span class="mood-indicator ${moodClass}">${currentMood}</span> mood</p>`;
+                    }
+                    
+                    html += `<div style="margin-top:15px;">`;
+                    
+                    data.forEach(movie => {
+                        html += `<div class="rec-item">
+                            <strong>${movie.title}</strong> (${movie.estimated_rating}/5)
+                            ${movie.context_match ? '<span class="match-tag context-match">Context Match</span>' : ''}
+                            ${movie.mood_match ? '<span class="match-tag mood-match">Mood Match</span>' : ''}
+                            <div>
+                                ${movie.genres.map(genre => `<span class="context-tag">${genre}</span>`).join(' ')}
+                            </div>
+                        </div>`;
+                    });
+                    
+                    html += `</div>`;
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
+                }
+            } catch (error) {
+                document.getElementById('movieResults').innerHTML = 
+                    `<p style="color:red;">Connection error: ${error.message}</p>`;
+            }
+        }
+
+        async function getBookRecommendations() {
+            const userId = document.getElementById('bookUserId').value;
+            if (!userId) {
+                alert("Please enter a User ID");
+                return;
+            }
+
+            try {
+                const response = await fetch(`/recommend/books/${userId}`);
+                const data = await response.json();
+                
+                const resultDiv = document.getElementById('bookResults');
+                resultDiv.style.display = "block";
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = "<h3>Recommendations:</h3>" + 
+                        data.map(item => `<p>• ${item}</p>`).join('');
+                } else {
+                    resultDiv.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
+                }
+            } catch (error) {
+                document.getElementById('bookResults').innerHTML = 
+                    `<p style="color:red;">Connection error: ${error.message}</p>`;
+            }
+        }
+
+        async function getWeather() {
+            const city = document.getElementById('cityName').value;
+            if (!city) {
+                alert("Please enter a city name");
+                return;
+            }
+
+            try {
+                const response = await fetch(`/weather/${city}`);
+                const data = await response.json();
+                
+                const resultDiv = document.getElementById('weatherResults');
+                resultDiv.style.display = "block";
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <h3>Weather in ${city}</h3>
+                        <p>Temperature: ${data.temperature}°C</p>
+                        <p>Condition: ${data.weather}</p>
+                        <p>${data.description}</p>
+                        <p><i class="fas fa-info-circle"></i> This weather information will be used to enhance your movie recommendations.</p>
+                    `;
+                    
+                    // Update context info
+                    document.getElementById('weatherContext').textContent = data.description;
+                } else {
+                    resultDiv.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
+                }
+            } catch (error) {
+                document.getElementById('weatherResults').innerHTML = 
+                    `<p style="color:red;">Connection error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
