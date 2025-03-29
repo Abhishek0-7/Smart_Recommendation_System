@@ -35,6 +35,29 @@ A context-aware recommendation system that provides personalized movie and book 
 
 2. **Books Dataset**: [Goodbooks-10k](https://github.com/zygmuntz/goodbooks-10k)
    - Contains 6 million ratings for 10,000 popular books
+  
+## Additional Notes
+
+1. **Dataset Preparation**: For the movies dataset, download the latest small dataset from MovieLens
+                            For the books dataset, use the Goodbooks-10k dataset from GitHub
+
+2. **Deployment Options**:
+
+   - The current setup uses ngrok for temporary public access
+
+   - For permanent deployment, consider services like:
+
+    1. Heroku
+    2. AWS Elastic Beanstalk
+    3. Google App Engine
+
+3. **Environment Variables**: Create a .env file for sensitive information:
+
+       NGROK_AUTH_TOKEN=your_ngrok_token
+       WEATHER_API_KEY=your_openweathermap_key
+   
+4. **Testing**: The test directory includes basic test cases
+                Run tests with python -m pytest tests/
 
 ## 🤝 Contributing
 Contributions are welcome! Please follow these steps:
